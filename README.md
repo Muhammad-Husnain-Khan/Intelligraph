@@ -21,7 +21,7 @@ Later phases (retrieval, knowledge graph, conversational answering, web app) are
 | Muhammad Muazzam Mahmood | 24L-3063 |
 | Rai Muhammad Umais | 24L-3032 |
 
-Repository: <https://github.com/rai-umais/IntelliGraph>
+Repository: <https://github.com/Muhammad-Husnain-Khan/IntelliGraph>
 
 ## Data
 
