@@ -1,0 +1,10 @@
+{
+  "raw": 11,
+  "rejected_missing": 0,
+  "imputed_title": 0,
+  "imputed_language": 0,
+  "removed_duplicates": 0,
+  "excluded_short": 0,
+  "flagged_outliers": 0,
+  "final": 11
+}
