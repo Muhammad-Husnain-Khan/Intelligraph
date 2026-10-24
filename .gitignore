@@ -1,0 +1,73 @@
+# ==============================================================================
+# IntelliGraph - Deliverable 1 .gitignore
+# Complies with: "A .gitignore file (do not upload large raw datasets to GitHub)"
+# ==============================================================================
+
+# 1. Large Raw & Processed Datasets (DO NOT COMMIT)
+data/raw/*
+data/interim/*
+data/processed/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+
+# Track manifest URLs and papers
+!data/manifests/
+!data/manifests/urls.csv
+!data/manifests/papers.csv
+
+# 2. Virtual Environment & Secrets
+.env
+.venv/
+venv/
+ENV/
+env/
+
+# 3. Python Bytecode & Test Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 4. LaTeX Build Junk (Preserve source main.tex and compiled report main.pdf)
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+report/*.lof
+report/*.lot
+report/*.bbl
+report/*.blg
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# 5. Editor & OS Artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# 6. EXPLICIT INCLUSIONS (Deliverable 1 Evidence & Outputs)
+# Explicitly keep logs as collection evidence required by Deliverable 1
+!logs/
+!logs/collection_log.jsonl
+!logs/cleaning_audit.json
+
+# Explicitly keep generated report figures and statistics
+!report/figures/*.png
+!report/figures/.gitkeep
+!report/generated/numbers.tex
+!report/main.pdf

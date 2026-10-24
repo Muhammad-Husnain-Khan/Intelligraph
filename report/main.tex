@@ -1,0 +1,283 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage[colorlinks=true,linkcolor=NavyBlue,urlcolor=NavyBlue]{hyperref}
+
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{IntelliGraph -- Deliverable 1}
+\fancyhead[R]{Problem Definition \& Data Foundations}
+\fancyfoot[C]{\thepage}
+\captionsetup{font=small,labelfont=bf}
+
+\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true,frame=single,
+  backgroundcolor=\color{black!3},numbers=left,numberstyle=\tiny\color{gray},
+  keywordstyle=\color{NavyBlue},commentstyle=\color{OliveGreen},language=Python}
+
+% Fill-in marker: visible in the PDF so nothing is forgotten
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[FILL: #1]}}}
+
+% Real pipeline results (written by data_scripts/make_report_numbers.py)
+\IfFileExists{generated/numbers.tex}{\input{generated/numbers.tex}}{}
+\newcommand{\val}[1]{\ifcsname val@#1\endcsname\csname val@#1\endcsname\else\todo{\detokenize{#1}}\fi}
+
+% Figure that shows the real PNG if present, otherwise a clearly marked box
+\newcommand{\edafigure}[4]{% file, width, caption, label
+  \begin{figure}[H]\centering
+  \IfFileExists{figures/#1}{\includegraphics[width=#2\textwidth]{figures/#1}}{%
+    \fbox{\parbox[c][5.5cm][c]{0.8\textwidth}{\centering\textcolor{red}{\textbf{PLACEHOLDER}}\\[2pt]
+    Run \texttt{data\_scripts/run\_eda.py} and save the chart as\\
+    \texttt{\detokenize{report/figures/#1}}}}}
+  \caption{#3}\label{#4}
+  \end{figure}}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+{\Large\bfseries AI Project\par}
+\vspace{0.6cm}
+{\Huge\bfseries IntelliGraph\par}
+\vspace{0.3cm}
+{\Large AI-Powered Website and Document Chat with Knowledge Graphs\par}
+\vspace{1.2cm}
+{\LARGE Deliverable 1: Problem Definition \& Data Foundations\par}
+\vspace{1.5cm}
+\begin{tabular}{llll}
+\toprule
+\textbf{Member} & \textbf{Roll No.} \\
+\midrule
+Muhammad Husnain Khan & 24L-3007 \\
+Muhammad Muazzam Mahmood & 24L-3063 \\
+Rai Muhammad Umais & 24L-3032 \\
+\bottomrule
+\end{tabular}
+\vspace{1cm}
+
+\todo{Department / Course name / Instructor}\par
+\vspace{0.5cm}
+Track: \todo{A (Application Development) or B (Original R\&D)}\par
+\vspace{0.5cm}
+Submission date: 23 October 2026\par
+\vspace{0.5cm}
+Repository: \url{https://github.com/rai-umais/IntelliGraph}
+\vfill
+\end{titlepage}
+
+\begin{abstract}
+IntelliGraph is an application that lets users extract and chat with information from any website or uploaded document. It combines automated web scraping to obtain clean text, a knowledge graph that maps how concepts in the source relate to each other, and a conversational AI that answers questions strictly from the collected data, with citations. This report covers Phase~1 (problem definition) and Phase~2 (data acquisition and preprocessing). It documents the real-world pain point, the target audience, the technical justification for using machine learning, and the data pipeline: collection, cleaning, feature strategy and exploratory data analysis. \todo{Add 2--3 sentences with your actual results: number of sources collected, documents kept after cleaning, languages found.}
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%====================================================================
+\section{Phase 1: Problem Definition}
+%====================================================================
+
+\subsection{Problem Statement}
+People routinely need one specific answer buried inside a long web page, a research article or a multi-page document. Finding it means reading and skimming for a long time, and this gets harder when the answer depends on how several concepts relate to each other (for example, which method builds on which, or which entity is responsible for which event). Existing tools fall short in three ways:
+\begin{itemize}[nosep]
+  \item \textbf{Keyword search} (Ctrl+F) matches exact strings only. It misses paraphrases and cannot synthesize an answer from several passages.
+  \item \textbf{General chatbots} answer from their training data, not from the page the user is reading, so they can hallucinate and give no verifiable source.
+  \item \textbf{Flat text} hides structure. Readers cannot see how concepts on a page connect without reading everything.
+\end{itemize}
+IntelliGraph addresses this by letting a user supply a website URL or upload a document (PDF, DOCX, TXT). The system scrapes and cleans the text, builds a knowledge graph of the main concepts and their relations, and answers questions \emph{only} from that specific data, with citations back to the source passages. When the source contains no evidence, the system says so instead of guessing.
+
+\subsection{Target Audience}
+\begin{itemize}[nosep]
+  \item \textbf{Primary users:} students and everyday readers who must understand long articles, documentation or study material quickly.
+  \item \textbf{Secondary users:} researchers, educators and small teams working with collections of documents and selected public web pages.
+  \item \textbf{Gap addressed:} tools that give source-grounded answers from a \emph{user-chosen} page or file together with a visual map of how its concepts link, rather than generic answers from a model's memory.
+\end{itemize}
+Initial scale target: 10--50 users. Languages targeted: \todo{English / Urdu / Roman Urdu -- keep only what you actually support}. These audiences are opportunities for the project, not validated market demand.
+
+\subsection{AI Justification}
+A rule-based program could be written to match keywords and return the surrounding sentence, but it fails on this problem for the following technical reasons.
+\begin{enumerate}[nosep]
+  \item \textbf{Semantic variation.} The same question can be phrased in many ways, and answers rarely use the question's words. A finite list of keyword rules cannot cover paraphrases or multilingual queries. Pretrained neural embeddings place semantically similar text close together in vector space, enabling \emph{semantic retrieval}.
+  \item \textbf{Synthesis.} Good answers often combine facts from several passages. Rules can extract a sentence, but a pretrained large language model (LLM) can compose a coherent, grounded answer from several retrieved passages.
+  \item \textbf{Concept and relation extraction.} Building the knowledge graph requires identifying entities and the relations between them in unstructured, varied text. Hand-written patterns are brittle across domains and writing styles, whereas pretrained NLP/LLM models generalize across them.
+  \item \textbf{Conversation.} Follow-up questions (``what about its limitations?'') depend on earlier turns. Resolving such references requires learned language understanding.
+\end{enumerate}
+\textbf{Scope of ML use (stated honestly).} The project uses \emph{pretrained} embedding models and a pretrained LLM; it does not train a new model from scratch. \todo{If your team fine-tunes any model, describe it here; if not, keep this sentence.} Conventional deterministic code remains responsible for input validation, permissions, rate limits and safe URL fetching. The collected corpus is \emph{knowledge data} to be retrieved from, not a supervised training set; a small manually labelled question-to-passage set will be used for \emph{evaluation only}.
+
+%====================================================================
+\section{Phase 2: Data Acquisition and Preprocessing}
+%====================================================================
+
+\subsection{Collection}
+The table below is filled automatically from the pipeline outputs. \todo{Describe the data you actually collected in a short paragraph.}
+
+\begin{table}[H]
+\centering
+\caption{Collection summary (generated from \texttt{collection\_log.jsonl}).}
+\begin{tabular}{p{6cm}r}
+\toprule
+\textbf{Item} & \textbf{Value} \\
+\midrule
+Collection date range & \val{date_range} \\
+URLs attempted & \val{urls_attempted} \\
+URLs successfully scraped & \val{urls_ok} \\
+Uploaded files (PDF / DOCX / TXT) & \val{f_pdf} / \val{f_docx} / \val{f_txt} \\
+Failed or excluded inputs & \val{failed} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Include here: (i) the kinds of sources chosen and why, (ii) the scraping method (e.g.\ \texttt{requests} + \texttt{BeautifulSoup}, \todo{your libraries}), (iii) evidence of permission or terms-of-use checks (\texttt{robots.txt}, public/licensed content), (iv) reasons for failed inputs (blocked, JavaScript-rendered, scanned PDF without OCR, timeouts), and (v) the location of the URL manifest and the log in the repository. Datasets downloaded from public hubs (Kaggle, UCI), if any, must be listed with name, link and licence: \todo{dataset names or ``none''}.
+
+\subsection{Data Representation}
+Each collected item is stored as a record with the fields below. Source provenance is retained to support citations and reproducibility. The corpus is unstructured text, not a supervised tabular dataset.
+\begin{table}[H]
+\centering
+\caption{Record schema produced by the collection scripts.}
+\begin{tabular}{lp{9cm}}
+\toprule
+\textbf{Field} & \textbf{Description} \\
+\midrule
+\texttt{source\_id} & Unique identifier of the source \\
+\texttt{title} & Page or document title \\
+\texttt{source\_type} & \texttt{website}, \texttt{pdf}, \texttt{docx} or \texttt{txt} \\
+\texttt{source\_uri} & URL or file name \\
+\texttt{collected\_at} & Collection timestamp (UTC) \\
+\texttt{language} & Language label (\todo{manual / auto-detected}) \\
+\texttt{text} & Extracted text \\
+\texttt{metadata} & Extra fields (e.g.\ page count, HTTP status) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Cleaning Implementation}
+Cleaning is implemented in \texttt{data\_scripts/clean\_data.py}. It performs the following steps in order.
+\begin{enumerate}[nosep]
+  \item \textbf{Missing values:} records missing required fields (\texttt{source\_id}, \texttt{source\_uri}, \texttt{text}) are rejected and logged.
+  \item \textbf{Text normalization:} Unicode normalized to NFC, null characters replaced, runs of whitespace collapsed. Web boilerplate (navigation, footers, scripts) is removed during extraction.
+  \item \textbf{Duplicates:} repeated captures of the same source are removed using a content hash (SHA-256). Identical text coming from \emph{different} source URIs is preserved, since provenance matters for citations.
+  \item \textbf{Very short records:} records below a minimum length threshold (\todo{e.g.\ 50 words}) are excluded as uninformative.
+  \item \textbf{Outliers:} word-count outliers are detected with the 1.5$\times$IQR rule, i.e.\ values outside $[Q_1-1.5\,\mathrm{IQR},\;Q_3+1.5\,\mathrm{IQR}]$. They are \emph{flagged and kept} rather than removed, because long documents are valid inputs and are handled by chunking.
+\end{enumerate}
+
+\begin{lstlisting}[caption={Core of the cleaning step (excerpt; full script in the repository).}]
+import hashlib, unicodedata, re
+
+def normalize(text):
+    text = unicodedata.normalize("NFC", text).replace("\x00", " ")
+    return re.sub(r"\s+", " ", text).strip()
+
+def content_hash(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+def flag_outliers(df, col="word_count"):
+    q1, q3 = df[col].quantile([0.25, 0.75])
+    iqr = q3 - q1
+    df["is_outlier"] = (df[col] < q1 - 1.5*iqr) | (df[col] > q3 + 1.5*iqr)
+    return df
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Cleaning audit (generated from \texttt{cleaning\_audit.json}).}
+\begin{tabular}{p{7cm}r}
+\toprule
+\textbf{Stage} & \textbf{Records} \\
+\midrule
+Raw records collected & \val{raw} \\
+Rejected: missing required fields & \val{rej_missing} \\
+Imputed missing optional fields & \val{imputed} \\
+Removed: duplicate content hash & \val{dups} \\
+Excluded: below length threshold & \val{short} \\
+Flagged as word-count outliers (kept) & \val{outliers} \\
+\textbf{Final cleaned records} & \val{final} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Feature Strategy: Normalization, Scaling and Encoding}
+Features in this project describe the corpus for inspection and quality analysis. They do not imply that a supervised predictive model was trained.
+\begin{itemize}[nosep]
+  \item \textbf{Text normalization:} Unicode NFC and whitespace standardization, while preserving original case and non-Latin characters.
+  \item \textbf{Derived numeric features:} character count, word count, sentence count, paragraph count.
+  \item \textbf{Scaling:} word count is min--max scaled, $x' = \dfrac{x-x_{\min}}{x_{\max}-x_{\min}}\in[0,1]$; character count is z-score standardized, $z=\dfrac{x-\mu}{\sigma}$.
+  \item \textbf{Encoding:} the categorical variables \texttt{source\_type} and \texttt{language} are one-hot encoded.
+  \item \textbf{Representation for retrieval:} text is later converted to vectors by a pretrained embedding model, and concepts/relations are extracted into the knowledge graph (Deliverable 2).
+\end{itemize}
+
+\subsection{Exploratory Data Analysis}
+Figures are generated from the cleaned corpus by \texttt{data\_scripts/run\_eda.py} and saved into \texttt{report/figures/}. Until the real PNG files are present, the report shows a red placeholder box instead of a chart.
+
+\edafigure{word_count_by_source_type.png}{0.7}{Word count distribution by source type (Box / Violin plot). Shows length spread and structural variance across websites and uploaded documents.}{fig:source_violin}
+
+\edafigure{log_word_count_histogram.png}{0.7}{Log-scale document word-count distribution with IQR outliers and chunk size thresholds (50-word merge minimum, 300-word window cap).}{fig:log_hist}
+
+\edafigure{top_20_terms.png}{0.7}{Top 20 domain-specific terms across the corpus (standard stopwords removed). Previews key concepts for knowledge graph construction.}{fig:top_terms}
+
+\edafigure{tfidf_2d_projection.png}{0.7}{2D TF-IDF semantic projection (PCA dimensionality reduction) colored by source type, showing thematic clustering.}{fig:tfidf_pca}
+
+\edafigure{word_count_vs_sentence_length.png}{0.7}{Total word count vs. average sentence length, mapping document size against syntactic complexity across sources.}{fig:sent_len}
+
+
+\subsection{Chunking and Retrieval Evaluation Plan}
+Cleaned documents are split into overlapping word windows (\todo{e.g.\ 300 words, 50 overlap}) while preserving source ID, source URI, content hash and chunk index. Word windows are an initial baseline, not a proven optimal strategy. The team will build a small human-labelled evaluation set covering paraphrases, exact entities, follow-up turns and unanswerable questions. Retrieval will be measured with Recall@$K$ and MRR (or nDCG@$K$); answers will also be reviewed for citation correctness and unsupported claims. Knowledge-graph quality will be checked by manually reviewing a sample of extracted entity--relation triples. Only measurements from completed runs will be reported.
+
+%====================================================================
+\section{Limitations and Ethical Considerations}
+%====================================================================
+Potential limitations include uneven multilingual retrieval quality, scanned PDFs that cannot be read without OCR, JavaScript-rendered pages that simple scrapers miss, errors in automatically extracted knowledge-graph relations, small evaluation samples, free-tier API limits and LLM hallucinations. Only publicly accessible or user-owned content will be collected, respecting \texttt{robots.txt} and site terms. The final application must restrict retrieval to the user's own workspace, guard URL fetching against server-side request forgery (SSRF), treat source text as untrusted input (prompt injection), and avoid exposing API keys or private documents in logs.
+
+%====================================================================
+\section{Conclusion and Next Steps}
+%====================================================================
+\todo{Summarize actual results: sources collected, cleaned records, main EDA findings.}
+
+\begin{table}[H]
+\centering
+\caption{Next steps (Deliverable 2 onward).}
+\begin{tabular}{p{6.2cm}p{3.6cm}p{4.5cm}}
+\toprule
+\textbf{Task} & \textbf{Owner} & \textbf{Evidence of completion} \\
+\midrule
+Chunking and embedding index & \todo{member} & Retrieval Recall@$K$ / MRR table \\
+Knowledge-graph extraction & \todo{member} & Sample triples and graph view \\
+Conversational answering with citations & \todo{member} & Cited-answer demo and review \\
+Evaluation set and testing & \todo{member} & Labelled set and results \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%====================================================================
+\section*{Submission Checklist (Repository)}
+%====================================================================
+\begin{table}[H]
+\centering
+\begin{tabular}{p{9cm}c}
+\toprule
+\textbf{Requirement} & \textbf{Done} \\
+\midrule
+Professional \texttt{README.md} describing the project & $\square$ \\
+\texttt{.gitignore} (large raw data not uploaded) & $\square$ \\
+Folder \texttt{data\_scripts/} with all Phase~2 code & $\square$ \\
+Commit history shows contributions from all three members & $\square$ \\
+This LaTeX report compiled to PDF with Phase~1 and~2 content & $\square$ \\
+Raw-data visualizations (class distribution, correlations) included & $\square$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Reproducibility}
+Repository: \url{https://github.com/rai-umais/IntelliGraph}. Record here: Python version \todo{x.y}, dependency installation (\texttt{pip install -r requirements.txt}), exact commands run (\todo{collect, clean, eda}), collection timestamp, source manifest revision and model settings. Secrets and restricted raw content are excluded from the repository.
+
+\end{document}
