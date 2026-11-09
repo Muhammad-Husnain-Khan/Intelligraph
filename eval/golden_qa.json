@@ -1,0 +1,386 @@
+[
+ {
+  "id": 1,
+  "question": "Which architectural concept did the mainframe era give us?",
+  "language": "en",
+  "answers": [
+   "batch processing"
+  ]
+ },
+ {
+  "id": 2,
+  "question": "By which decade were personal computers cheap enough to put computing power on desktops?",
+  "language": "en",
+  "answers": [
+   "By the 1980s"
+  ]
+ },
+ {
+  "id": 3,
+  "question": "What problem did the fat client antipattern create?",
+  "language": "en",
+  "answers": [
+   "business rules were scattered across thousands of desktop installations"
+  ]
+ },
+ {
+  "id": 4,
+  "question": "When was three-tier architecture the dominant architecture?",
+  "language": "en",
+  "answers": [
+   "dominant architecture of the 1990s and early 2000s"
+  ]
+ },
+ {
+  "id": 5,
+  "question": "What is a Big Ball of Mud?",
+  "language": "en",
+  "answers": [
+   "a system with no meaningful structure"
+  ]
+ },
+ {
+  "id": 6,
+  "question": "What does the central hub in SOA stand for?",
+  "language": "en",
+  "answers": [
+   "Enterprise Service Bus (ESB)"
+  ]
+ },
+ {
+  "id": 7,
+  "question": "When did Service-Oriented Architecture emerge?",
+  "language": "en",
+  "answers": [
+   "early 2000s"
+  ]
+ },
+ {
+  "id": 8,
+  "question": "What does Conway's Law state?",
+  "language": "en",
+  "answers": [
+   "systems tend to mirror the communication structures of the organizations that build them"
+  ]
+ },
+ {
+  "id": 9,
+  "question": "When did microservices architecture emerge?",
+  "language": "en",
+  "answers": [
+   "around 2010–2012"
+  ]
+ },
+ {
+  "id": 10,
+  "question": "Which companies' engineering practices did microservices come from?",
+  "language": "en",
+  "answers": [
+   "Netflix, Amazon, and SoundCloud"
+  ]
+ },
+ {
+  "id": 11,
+  "question": "Which successful products started as monoliths?",
+  "language": "en",
+  "answers": [
+   "early versions of Netflix, Uber, and Amazon"
+  ]
+ },
+ {
+  "id": 12,
+  "question": "Why did the cloud change the economics of scaling?",
+  "language": "en",
+  "answers": [
+   "scaling horizontally (more servers) was cheaper than scaling vertically"
+  ]
+ },
+ {
+  "id": 13,
+  "question": "Which standards made SOA heavy to work with?",
+  "language": "en",
+  "answers": [
+   "SOAP and WSDL"
+  ]
+ },
+ {
+  "id": 14,
+  "question": "What do dry heat cooking methods use to cook food?",
+  "language": "en",
+  "answers": [
+   "Dry heat methods cook food without added liquid"
+  ]
+ },
+ {
+  "id": 15,
+  "question": "What do moist heat cooking methods rely on?",
+  "language": "en",
+  "answers": [
+   "Moist heat methods rely on water or steam"
+  ]
+ },
+ {
+  "id": 16,
+  "question": "What do combination cooking methods use?",
+  "language": "en",
+  "answers": [
+   "using both dry and moist heat"
+  ]
+ },
+ {
+  "id": 17,
+  "question": "How far back does roasting date?",
+  "language": "en",
+  "answers": [
+   "prehistoric times"
+  ]
+ },
+ {
+  "id": 18,
+  "question": "What is the Argentine grilling tradition called?",
+  "language": "en",
+  "answers": [
+   "known as asado"
+  ]
+ },
+ {
+  "id": 19,
+  "question": "What is baking typically used for?",
+  "language": "en",
+  "answers": [
+   "batters and doughs that rise and solidify"
+  ]
+ },
+ {
+  "id": 20,
+  "question": "Why do recipes stress preheating the oven?",
+  "language": "en",
+  "answers": [
+   "ensures a consistent environment"
+  ]
+ },
+ {
+  "id": 21,
+  "question": "Which bakeware is recommended for browning?",
+  "language": "en",
+  "answers": [
+   "metal pans for browning"
+  ]
+ },
+ {
+  "id": 22,
+  "question": "Where and when was Asim Munir born?",
+  "language": "en",
+  "answers": [
+   "born in Rawalpindi, Punjab, Pakistan in 1968"
+  ]
+ },
+ {
+  "id": 23,
+  "question": "What was Asim Munir's father's profession?",
+  "language": "en",
+  "answers": [
+   "His father was a schoolteacher and also an imam"
+  ]
+ },
+ {
+  "id": 24,
+  "question": "Where did Munir receive the Sword of Honour?",
+  "language": "en",
+  "answers": [
+   "Officers Training School (OTS), Mangla"
+  ]
+ },
+ {
+  "id": 25,
+  "question": "Where did Munir command the XXX Corps?",
+  "language": "en",
+  "answers": [
+   "XXX Corps in Gujranwala"
+  ]
+ },
+ {
+  "id": 26,
+  "question": "When was Munir promoted to Field Marshal?",
+  "language": "en",
+  "answers": [
+   "On 20 May 2025"
+  ]
+ },
+ {
+  "id": 27,
+  "question": "Whom did Munir follow as a Field Marshal in Pakistan's history?",
+  "language": "en",
+  "answers": [
+   "after Ayub Khan"
+  ]
+ },
+ {
+  "id": 28,
+  "question": "When was Munir appointed the first Chief of Defence Forces?",
+  "language": "en",
+  "answers": [
+   "On 4 December 2025"
+  ]
+ },
+ {
+  "id": 29,
+  "question": "How long was Munir's tenure as DG-ISI?",
+  "language": "en",
+  "answers": [
+   "a tenure of eight months"
+  ]
+ },
+ {
+  "id": 30,
+  "question": "Who replaced Munir as Director-General of the ISI?",
+  "language": "en",
+  "answers": [
+   "replaced by Lieutenant General Faiz Hameed"
+  ]
+ },
+ {
+  "id": 31,
+  "question": "Where did Munir earn his MPhil?",
+  "language": "en",
+  "answers": [
+   "National Defence University, Islamabad"
+  ]
+ },
+ {
+  "id": 32,
+  "question": "When was Munir appointed Chief of the Army Staff?",
+  "language": "en",
+  "answers": [
+   "appointed the COAS on 24 November 2022"
+  ]
+ },
+ {
+  "id": 33,
+  "question": "How many eligible candidates was Munir selected from?",
+  "language": "en",
+  "answers": [
+   "pool of six eligible candidates"
+  ]
+ },
+ {
+  "id": 34,
+  "question": "Who conferred the Nishan-e-Imtiaz (Military) on Munir?",
+  "language": "en",
+  "answers": [
+   "conferred the Nishan-e-Imtiaz (Military) by President Arif Alvi"
+  ]
+ },
+ {
+  "id": 35,
+  "question": "By how much did Parliament extend the service terms of the armed forces heads in 2024?",
+  "language": "en",
+  "answers": [
+   "from three to five years"
+  ]
+ },
+ {
+  "id": 36,
+  "question": "Which army chief previously headed both Military Intelligence and the ISI?",
+  "language": "en",
+  "answers": [
+   "headed both the Military Intelligence and Inter-Services Intelligence"
+  ]
+ },
+ {
+  "id": 37,
+  "question": "What is the Inter-Services Intelligence (ISI)?",
+  "language": "en",
+  "answers": [
+   "foreign intelligence agency of Pakistan"
+  ]
+ },
+ {
+  "id": 38,
+  "question": "Who formally heads the ISI?",
+  "language": "en",
+  "answers": [
+   "formally headed by a serving three-star general"
+  ]
+ },
+ {
+  "id": 39,
+  "question": "Who appoints the head of the ISI?",
+  "language": "en",
+  "answers": [
+   "appointed by the Prime Minister of Pakistan in consultation with the Chief of Army Staff"
+  ]
+ },
+ {
+  "id": 40,
+  "question": "Who headed the ISI as of 30 September 2024?",
+  "language": "en",
+  "answers": [
+   "Lt. Gen. Asim Malik"
+  ]
+ },
+ {
+  "id": 41,
+  "question": "Who does the ISI Director-General report to?",
+  "language": "en",
+  "answers": [
+   "reports directly to both the Prime Minister and the Chief of Army Staff"
+  ]
+ },
+ {
+  "id": 42,
+  "question": "What was the ISI's special Afghanistan section called?",
+  "language": "en",
+  "answers": [
+   "known as the SS Directorate"
+  ]
+ },
+ {
+  "id": 43,
+  "question": "Which operation began ISI intelligence collection on the Pakistan Communist Party and Pakistan Peoples Party?",
+  "language": "en",
+  "answers": [
+   "Operation Fair Play"
+  ]
+ },
+ {
+  "id": 44,
+  "question": "What is the price of the Ufone Super Card Max?",
+  "language": "en",
+  "answers": [
+   "Rs. 1900"
+  ]
+ },
+ {
+  "id": 45,
+  "question": "How much does the Ufone Super Card Premium cost?",
+  "language": "en",
+  "answers": [
+   "Rs.2100"
+  ]
+ },
+ {
+  "id": 46,
+  "question": "Which code do I dial to subscribe to Super Card Max?",
+  "language": "en",
+  "answers": [
+   "*629#"
+  ]
+ },
+ {
+  "id": 47,
+  "question": "How much does Weekly Power Max cost?",
+  "language": "en",
+  "answers": [
+   "Rs.600"
+  ]
+ },
+ {
+  "id": 48,
+  "question": "How much internet does Weekly Power Max include?",
+  "language": "en",
+  "answers": [
+   "25 GB"
+  ]
+ }
+]
