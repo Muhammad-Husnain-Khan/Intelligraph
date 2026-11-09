@@ -1,0 +1,166 @@
+{
+ "by_source": {
+  "en.wikipedia.org": {
+   "vector": {
+    "n": 22,
+    "precision": 0.09545454545454546,
+    "recall": 0.8409090909090909,
+    "f1": 0.17011019283746556,
+    "recall@5": 0.6818181818181818,
+    "mrr": 0.5071969696969697,
+    "auc_roc": 0.75831538645609
+   },
+   "graph": {
+    "n": 22,
+    "precision": 0.10548340548340547,
+    "recall": 0.5681818181818182,
+    "f1": 0.17645611963793784,
+    "recall@5": 0.4772727272727273,
+    "mrr": 0.34924242424242424,
+    "auc_roc": null
+   },
+   "hybrid": {
+    "n": 22,
+    "precision": 0.07954812196122357,
+    "recall": 1.0,
+    "f1": 0.14629651394357276,
+    "recall@5": 0.6818181818181818,
+    "mrr": 0.5180724578451851,
+    "auc_roc": 0.7510508474576271
+   }
+  },
+  "hosseinnejati.medium.com": {
+   "vector": {
+    "n": 13,
+    "precision": 0.1,
+    "recall": 0.9230769230769231,
+    "f1": 0.1794871794871795,
+    "recall@5": 0.9230769230769231,
+    "mrr": 0.8461538461538461,
+    "auc_roc": 0.8593030900723209
+   },
+   "graph": {
+    "n": 13,
+    "precision": 0.14358974358974358,
+    "recall": 0.2692307692307692,
+    "f1": 0.17216117216117216,
+    "recall@5": 0.2692307692307692,
+    "mrr": 0.25,
+    "auc_roc": null
+   },
+   "hybrid": {
+    "n": 13,
+    "precision": 0.07915128949006063,
+    "recall": 1.0,
+    "f1": 0.1456168768385963,
+    "recall@5": 0.9230769230769231,
+    "mrr": 0.8531468531468532,
+    "auc_roc": 0.841687552213868
+   }
+  },
+  "www.culinaryartsswitzerland.com": {
+   "vector": {
+    "n": 8,
+    "precision": 0.1,
+    "recall": 1.0,
+    "f1": 0.18181818181818182,
+    "recall@5": 1.0,
+    "mrr": 0.9375,
+    "auc_roc": 0.8315972222222222
+   },
+   "graph": {
+    "n": 8,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "recall@5": 0.0,
+    "mrr": 0.0,
+    "auc_roc": null
+   },
+   "hybrid": {
+    "n": 8,
+    "precision": 0.0674733709273183,
+    "recall": 1.0,
+    "f1": 0.12609737076648841,
+    "recall@5": 1.0,
+    "mrr": 0.9375,
+    "auc_roc": 0.8945652173913043
+   }
+  },
+  "www.ufone.com": {
+   "vector": {
+    "n": 5,
+    "precision": 0.1,
+    "recall": 1.0,
+    "f1": 0.18181818181818182,
+    "recall@5": 1.0,
+    "mrr": 1.0,
+    "auc_roc": 0.9511111111111111
+   },
+   "graph": {
+    "n": 5,
+    "precision": 0.36666666666666664,
+    "recall": 1.0,
+    "f1": 0.5266666666666666,
+    "recall@5": 1.0,
+    "mrr": 1.0,
+    "auc_roc": null
+   },
+   "hybrid": {
+    "n": 5,
+    "precision": 0.09636363636363636,
+    "recall": 1.0,
+    "f1": 0.17575757575757578,
+    "recall@5": 1.0,
+    "mrr": 1.0,
+    "auc_roc": 0.9531914893617022
+   }
+  }
+ },
+ "failure_examples": {
+  "graph_missed_vector_found": [
+   {
+    "id": 1,
+    "question": "Which architectural concept did the mainframe era give us?"
+   },
+   {
+    "id": 2,
+    "question": "By which decade were personal computers cheap enough to put computing power on desktops?"
+   },
+   {
+    "id": 3,
+    "question": "What problem did the fat client antipattern create?"
+   },
+   {
+    "id": 4,
+    "question": "When was three-tier architecture the dominant architecture?"
+   },
+   {
+    "id": 6,
+    "question": "What does the central hub in SOA stand for?"
+   }
+  ],
+  "vector_missed_graph_found": [
+   {
+    "id": 5,
+    "question": "What is a Big Ball of Mud?"
+   },
+   {
+    "id": 24,
+    "question": "Where did Munir receive the Sword of Honour?"
+   },
+   {
+    "id": 25,
+    "question": "Where did Munir command the XXX Corps?"
+   },
+   {
+    "id": 30,
+    "question": "Who replaced Munir as Director-General of the ISI?"
+   }
+  ],
+  "counts": {
+   "graph_missed_vector_found": 26,
+   "vector_missed_graph_found": 4
+  }
+ }
+}
