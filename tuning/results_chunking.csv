@@ -1,0 +1,4 @@
+max_words,overlap,n_chunks,precision@10,query_ms
+150,25,154,0.1146,6.11
+300,50,110,0.1,5.74
+600,100,99,0.1,5.22

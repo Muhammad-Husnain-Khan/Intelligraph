@@ -4,14 +4,14 @@
 
 IntelliGraph lets a user supply a website URL or upload a document (PDF, DOCX, TXT). The planned pipeline scrapes and cleans the text, builds a knowledge graph of the main concepts and their relations, and answers questions *only* from that data, with citations to the source passages. If the source holds no evidence, the system says so instead of guessing.
 
-This repository currently contains **Deliverable 1** only:
+This repository contains **Deliverable 1** (Phases 1-2) and **Deliverable 2** (Phases 3-4, see below):
 
 | Phase | Content | Where |
 |-------|---------|-------|
 | 1. Problem Definition | Problem, audience, AI justification | `report/main.tex` |
 | 2. Data Acquisition & Preprocessing | Collection, cleaning, feature strategy, EDA | `data_scripts/`, `report/main.tex` |
 
-Later phases (retrieval, knowledge graph, conversational answering, web app) are **not** implemented here.
+Later phases (web app, conversational UI) are **not** implemented here.
 
 ## Team
 
@@ -27,13 +27,13 @@ Repository: <https://github.com/Muhammad-Husnain-Khan/IntelliGraph>
 
 Theme: **AI and machine learning**, so a later knowledge graph has real links between pages.
 
-* **Websites** (`data/manifests/urls.csv`): English Wikipedia articles, official scikit-learn / Python documentation, and a few Urdu Wikipedia pages (`expected_language=ur`, language labels are assigned manually in the manifest). Wikipedia text is CC BY-SA.
+* **Websites** (`data/manifests/urls.csv`): English Wikipedia articles, official scikit-learn / Python documentation, telecommunications portals, software architecture articles, and culinary guides. Wikipedia text is CC BY-SA.
 * **Files** (`data/raw/uploads/`, git-ignored): open-access arXiv PDFs listed in `data/manifests/papers.csv`, plus course notes written/owned by the team (DOCX and TXT) that you place in the same folder.
-* **Languages:** English and Urdu. **Roman Urdu is not included** because no permitted example text was identified; the language heuristic also cannot detect it.
+* **Languages:** English.
 * No Kaggle/UCI datasets are used: the project retrieves from documents, not tabular data.
 * Only public/permitted content is collected; `robots.txt` is honoured. Some failures (JavaScript-heavy pages, scanned PDFs, robots blocks) are expected, are written to `logs/collection_log.jsonl`, and are reported rather than hidden.
 
-All manifest entries are a starting point; **verify them** (especially the Urdu URLs) before the real run.
+All manifest entries are a starting point; **verify them** before the real run.
 
 ## Folder structure
 
@@ -100,7 +100,7 @@ Tests (offline): `python -m pytest`
 | Figures | `report/figures/{source_type_distribution,word_count_distribution,feature_correlation,language_distribution}.png` |
 | Report numbers | `report/generated/numbers.tex` |
 
-Record schema: `source_id, title, source_type (website|pdf|docx|txt), source_uri, collected_at (UTC), language (en|ur|roman_ur|unknown), text, metadata`.
+Record schema: `source_id, title, source_type (website|pdf|docx|txt), source_uri, collected_at (UTC), language (en|unknown), text, metadata`.
 
 ## Adding the results to the report
 
@@ -124,6 +124,32 @@ python -m data_scripts.chunk_data      # writes data/processed/chunks.jsonl (git
 ```
 
 Heading detection is a heuristic (short line without sentence punctuation), so navigation-heavy pages produce noisy headings. Chunk size is a baseline to be compared with Recall@K / MRR later.
+
+## Deliverable 2: Retrieval, Generation and Evaluation (Phases 3-4)
+
+Three architectures answer questions from `chunks.jsonl`:
+
+| # | Architecture | Module |
+|---|--------------|--------|
+| 1 | Vector-only (pgvector, cosine) | `retrieval/vector_retriever.py` |
+| 2 | Graph-only (Neo4j traversal) | `retrieval/graph_retriever.py` |
+| 3 | Hybrid (text + graph facts in one prompt) | `retrieval/hybrid_retriever.py` |
+
+Other parts: `retrieval/embed.py` (sentence-transformers), `retrieval/index_chunks.py` (loads Postgres), `retrieval/graph_build.py` (rule-based entity co-occurrence graph), `retrieval/gemini_client.py` (REST), `api/main.py` (FastAPI), `tuning/` (chunk-size and embedding sweeps), `eval/` (golden set, metrics, domain bias check).
+
+```bash
+docker run -d --name pg-vector -e POSTGRES_PASSWORD=pass -p 5433:5432 ankane/pgvector
+docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:5
+pip install -r requirements.txt           # then copy new variables from .env.example into .env
+python -m retrieval.index_chunks          # embed + load pgvector
+python -m retrieval.graph_build           # build Neo4j graph
+uvicorn api.main:app                      # POST /query/{vector,graph,hybrid}  {"question": "..."}
+python -m eval.run_eval [--generate]      # --generate needs INTELLIGRAPH_GEMINI_API_KEY
+python -m eval.bias_check
+python -m tuning.sweep_chunking ; python -m tuning.sweep_embeddings
+```
+
+Notes: Postgres is mapped to host port **5433** to avoid clashing with a local Postgres. Metrics use answer-string matching for relevance (a chunk is relevant if it contains an answer string). `eval/golden_qa.json` contains 48 verified English Q&A pairs covering diverse domains from the collected corpus. AUC-ROC is reported for vector and hybrid architectures; it is not defined for the graph architecture (no similarity score). Evaluation across $K=3, 5, 10$ establishes the Hybrid architecture with $K=5$ as the optimal production operating point (92.7% recall, 0.729 MRR). Results live in `eval/metrics_summary.json`, `eval/k_sweep_summary.json`, `eval/bias_report.json`, `tuning/results_*.csv`.
 
 ## Reproducibility notes
 
