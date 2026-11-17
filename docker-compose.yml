@@ -1,0 +1,49 @@
+services:
+  pg:
+    image: ankane/pgvector
+    environment:
+      POSTGRES_PASSWORD: pass
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 20
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/password
+    volumes: [neodata:/data]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null || exit 1"]
+      interval: 5s
+      retries: 40
+  api:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      INTELLIGRAPH_PGVECTOR_DSN: postgresql://postgres:pass@pg:5432/postgres
+      INTELLIGRAPH_NEO4J_URI: bolt://neo4j:7687
+      INTELLIGRAPH_NEO4J_PASSWORD: password
+      INTELLIGRAPH_FRONTEND_ORIGIN: http://localhost:8080
+    depends_on:
+      pg: {condition: service_healthy}
+      neo4j: {condition: service_healthy}
+    volumes:
+      - ./data:/app/data
+      - hfcache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      retries: 30
+      start_period: 60s
+  web:
+    build: ./web
+    ports: ["8080:80"]
+    depends_on:
+      api: {condition: service_healthy}
+volumes:
+  pgdata:
+  neodata:
+  hfcache:

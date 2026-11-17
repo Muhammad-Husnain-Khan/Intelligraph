@@ -1,0 +1,255 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage[colorlinks=true,linkcolor=NavyBlue,urlcolor=NavyBlue,citecolor=NavyBlue]{hyperref}
+
+% Supports compiling standalone inside report/generated/ or merged from report/
+\graphicspath{{../figures/}{figures/}}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{IntelliGraph -- Deliverable 3}
+\fancyhead[R]{Phase 5 (Output Execution) \& Phase 6 (Final Documentation)}
+\fancyfoot[C]{\thepage}
+\captionsetup{font=small,labelfont=bf}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+{\Large\bfseries AI Project\par}
+\vspace{0.6cm}
+{\Huge\bfseries IntelliGraph\par}
+\vspace{0.3cm}
+{\Large AI-Powered Website and Document Chat with Knowledge Graphs\par}
+\vspace{1.2cm}
+{\LARGE Deliverable 3: Final Deployment \& Technical Report\par}
+\vspace{0.4cm}
+{\Large (Phases 5 and 6 -- Track A: Application Development)\par}
+\vspace{1.5cm}
+\begin{tabular}{lll}
+\toprule
+\textbf{Member} & \textbf{Roll No.} & \textbf{Assigned Scope} \\
+\midrule
+Muhammad Husnain Khan & 24L-3007 & Backend API, LLM Layer, Pooled Stores \& SSE Chat \\
+Muhammad Muazzam Mahmood & 24L-3063 & React Frontend, User/Dev Modes \& Docker Deployment \\
+Rai Muhammad Umais & 24L-3032 & Runtime Ingestion, Heading Extraction \& Test Suite \\
+\bottomrule
+\end{tabular}
+\vspace{1.5cm}
+
+Repository: \url{https://github.com/Muhammad-Husnain-Khan/IntelliGraph}
+\vfill
+\end{titlepage}
+
+%--------------------------------------------------------------------
+% Abstract for the merged final document (Phase 6 requirement)
+%--------------------------------------------------------------------
+\begin{abstract}
+General-purpose language models frequently answer user questions from parametric memory, producing unverifiable claims without source provenance. \textbf{IntelliGraph} addresses this problem by combining dense semantic vector retrieval (\texttt{pgvector} over local 384-dimensional \texttt{all-MiniLM-L6-v2} embeddings \cite{reimers2019sbert,wang2020minilm}) with structured entity co-occurrence graph traversal (Neo4j) in a grounded Retrieval-Augmented Generation (RAG) architecture \cite{lewis2020rag}. Across our 48-question golden benchmark, Hybrid retrieval at the selected operating point ($K=5$) achieves 92.7\% evidence recall, 0.729 Mean Reciprocal Rank (MRR), and 0.761 AUC-ROC, outperforming isolated Vector-Only (83.3\% recall) and Graph-Only (31.2\% recall) baselines. In Deliverable~3 (Phases~5 and~6), we transition this pipeline into a production-ready web application under \textbf{Track A (Application Development)}, featuring a React + TypeScript frontend communicating with a FastAPI backend over Server-Sent Events (SSE) \cite{sse}, real-time multi-format source ingestion (PDF, DOCX, TXT, URLs, and pasted text), validated inline citations with section headings, an explicit ``The sources don't say.'' refusal state, a retrieval-only fallback when the LLM is unavailable, and a containerized Docker Compose deployment.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% Continue section numbering after Phase 1-2 (main.tex) and Phase 3-4 (main2.tex)
+\setcounter{section}{4}
+
+%====================================================================
+\section{Phase 5: Output Execution (Track A: Application Development)}
+%====================================================================
+
+In Phase~5, IntelliGraph transitions from the batch retrieval and evaluation pipeline of Phases~1--4 into a live, interactive web application under \textbf{Track A (Application Development)}.
+
+\subsection{Integration: Seamless Frontend--Backend Real-Time Inference}
+The frontend is built with React, Vite, and TypeScript, and communicates directly with the FastAPI microservice over HTTP REST and Server-Sent Events (SSE) \cite{sse} without blocking the browser or relying on static mock responses.
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Preloaded Backend Lifespan:} On startup, FastAPI preloads the local \texttt{all-MiniLM-L6-v2} embedding model, opens a threaded PostgreSQL connection pool and a single Neo4j driver instance, and executes a live startup probe against the configured LLM provider. Component readiness and active model status are exposed through \texttt{GET /api/health}.
+  \item \textbf{LLM Provider Abstraction \& Resilience:} A unified provider interface (\texttt{retrieval/llm.py}) supports Google Gemini (REST with \texttt{x-goog-api-key} header authentication) and an OpenAI-compatible fallback provider (Groq). Rather than hard-coding a model identifier, the startup probe discovers available models dynamically and confirms readiness with a live generation call. Transient 429/503 responses are retried with bounded exponential backoff, falling back automatically to the secondary provider or to a truthful \emph{retrieval-only mode} if no LLM is reachable.
+  \item \textbf{Streaming Inference Pipeline (\texttt{POST /api/chat/stream}):} Each user query executes in real time and streams structured SSE events (\texttt{stage}, \texttt{evidence}, \texttt{token}, \texttt{done}, \texttt{error}):
+  \begin{enumerate}[nosep]
+    \item \emph{Follow-up Condensation:} When conversation history exists, the prior turns and new question are condensed into a standalone retrieval query.
+    \item \emph{Hybrid Retrieval at $K=5$:} The query is embedded locally and matched against \texttt{pgvector} (respecting any Library source filter), while a 1--2 hop Neo4j traversal adds up to three graph-reached bridge passages.
+    \item \emph{Grounded Streaming \& Citation Validation:} Retrieved passages are delimited as untrusted data in the prompt; the default depth of $K=5$ limits context length to prevent middle-context attention degradation \cite{liu2024lost}. The backend strips any hallucinated \texttt{[n]} indices and sets \texttt{grounded = true} only when at least one valid passage citation is present and the model does not emit \texttt{NO\_EVIDENCE}.
+  \end{enumerate}
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Production API routes supporting real-time inference and runtime source management (legacy \texttt{/health} and \texttt{/query/\{vector,graph,hybrid\}} endpoints remain unchanged).}
+\label{tab:d3-api}
+\small
+\begin{tabularx}{\textwidth}{@{}L{5.0cm} Y@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Role in Application} \\
+\midrule
+\texttt{GET /api/health} & Reports PostgreSQL, Neo4j, embedder, and live LLM probe status alongside total indexed sources and passages. \\
+\texttt{POST /api/sources/files} & Multipart upload of PDF, DOCX, and TXT files with magic-byte verification and size limits. \\
+\texttt{POST /api/sources/url}, \texttt{/text} & Runtime web page ingestion (with SSRF and \texttt{robots.txt} guards) and direct pasted-text ingestion. \\
+\texttt{GET /api/sources/\{id\}/events} & SSE stream reporting real per-stage ingestion progress (\texttt{fetch}, \texttt{extract}, \texttt{clean}, \texttt{chunk}, \texttt{embed}, \texttt{graph}). \\
+\texttt{GET, DELETE /api/sources} & Lists active Library sources and deletes a source along with its chunks, graph edges, and orphaned entities. \\
+\texttt{POST /api/chat/stream}, \texttt{/api/chat} & Streams real-time retrieval stages, evidence passages, answer tokens, and validated citations (plus blocking variant for tests). \\
+\texttt{POST /api/compare} & Runs a query live across Vector, Graph, and Hybrid retrieval side-by-side in Developer mode. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{User Experience: Runtime Upload and Clear, Grounded Predictions}
+The user interface is designed as an evidence-first reading room consisting of three responsive zones: the \textbf{Library} (source upload and scope control), the \textbf{Transcript} (questions, answers, and cited sources), and the \textbf{Evidence Panel} (full source passages).
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Immediate Runtime Data Upload:} Users can drag-and-drop PDF, DOCX, or TXT files, submit a website URL, or paste raw text directly in the Library panel. Each upload runs extraction, cleaning, 300/50 chunking, local embedding, and Neo4j graph indexing incrementally via upserts (never dropping existing tables), displaying real stage progress via SSE. Newly uploaded sources become searchable immediately within the same session without restarting any service. Unsupported inputs (such as scanned PDFs lacking a text layer or JavaScript-only pages) report explicit failure reasons.
+  \item \textbf{Section Heading Extraction \& Clean Display:} Extractors and the chunker record the nearest preceding section heading for PDF, DOCX, TXT, and web sources (stripping residual Markdown formatting markers and providing clean page labels for unheaded PDFs), while source filenames are humanised for readability with raw filenames preserved inside \emph{Source details}.
+  \item \textbf{Clear, Grounded Predictions:} Answers render inline superscript citations (\texttt{[n]}) linked to a numbered \emph{Sources} list and matching Evidence slips. Citations discovered via graph traversal are visually distinguished in vermilion from vector-retrieved brass citations. When the indexed sources lack evidence, the application enters a clear, deliberate \emph{``The sources don't say.''} state while keeping the closest retrieved passages visible for user inspection.
+  \item \textbf{User Mode and Developer Mode:} By default, \textbf{User mode} keeps the interface uncluttered, replacing raw $K$ values with a \emph{Thinking} depth control (\emph{Quick}, \emph{Standard}, \emph{Deep} mapped to $K \in \{3, 5, 10\}$ via a shared configuration), a single plain status line during inference, and collapsed \emph{Details} and \emph{Source details} disclosures. An opt-in \textbf{Developer mode} (toggled from the footer or \texttt{Ctrl+Shift+D}) exposes retrieval mode selection (\emph{Hybrid}, \emph{Vector}, \emph{Graph}, \emph{Compare}), numeric $K$ ($1$--$20$), similarity scores, raw chunk IDs, stage timings, the full health probe panel, JSON export, and the raw SSE event log.
+\end{itemize}
+
+\subsection{Measured Real-Time Inference Latency}
+Table~\ref{tab:d3-latency} and Figure~\ref{fig:phase5-latency} report real-time measurements collected from five live Hybrid ($K=5$) queries against PostgreSQL, Neo4j, and the Gemini free-tier API on the deployment machine. Local vector and graph retrieval completes in 72--265~ms, confirming that end-to-end response latency is governed primarily by external LLM generation time.
+
+\begin{table}[H]
+\centering
+\caption{Measured end-to-end latency across five live Hybrid ($K=5$) queries (milliseconds).}
+\label{tab:d3-latency}
+\small
+\begin{tabular}{llrrr}
+\toprule
+\textbf{Run} & \textbf{Probed Model} & \textbf{Retrieval (ms)} & \textbf{Time to First Token (ms)} & \textbf{Total LLM Time (ms)} \\
+\midrule
+Run 1 & \texttt{gemini-flash-lite-latest} & 265 & 1,478 & 1,312 \\
+Run 2 & \texttt{gemini-flash-lite-latest} & 113 & 1,657 & 1,726 \\
+Run 3 & \texttt{gemini-flash-lite-latest} & 115 & 5,920 & 6,202 \\
+Run 4 & \texttt{gemini-3.1-flash-lite} & 85 & 2,112 & 3,068 \\
+Run 5 & \texttt{gemini-3.1-flash-lite} & 72 & 4,188 & 4,260 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%====================================================================
+\section{Phase 6: Final Documentation \& Deployment}
+%====================================================================
+
+\subsection{Visualizations: Final Performance, Latency, and Sample Predictions}
+Because IntelliGraph employs pretrained transformer embeddings (\texttt{all-MiniLM-L6-v2}) and pretrained generative LLMs without fine-tuning weights, there are no training-loss curves to plot. Instead, Figure~\ref{fig:final-sweep} presents the final empirical performance summary across retrieval paradigms and cutoffs ($K=3,5,10$), Figure~\ref{fig:phase5-latency} visualizes real-time Phase~5 inference latency, and Figures~\ref{fig:sample-user}--\ref{fig:sample-refusal} show real sample predictions captured from the live application.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{eval_recall_mrr_vs_k.png}
+\caption{Final performance summary across $K \in \{3,5,10\}$: Recall (left) and MRR (right) on the 48-question golden set, illustrating why Hybrid at $K=5$ (92.7\% Recall, 0.729 MRR) was selected for production.}
+\label{fig:final-sweep}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{phase5_latency.png}
+\caption{Phase 5 real-time latency breakdown (Retrieval vs. Time to First Token vs. Total LLM Generation) across five live Hybrid ($K=5$) runs.}
+\label{fig:phase5-latency}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{ui_user_mode.png}
+\caption{Sample Prediction 1 (User Mode): Uploading a multi-section document and querying its second section yields a grounded answer with citation \texttt{[1]}, clean section heading (\emph{2. Raft Consensus Protocol}), and matching Evidence slip.}
+\label{fig:sample-user}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{ui_developer_mode.png}
+\caption{Sample Prediction 2 (Developer Mode): Exposing real-time retrieval stage timings, cosine similarity scores, chunk identifiers, retrieval mode controls, and live \texttt{/api/health} probe status for the same query.}
+\label{fig:sample-dev}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{ui_not_in_sources.png}
+\caption{Sample Prediction 3 (Out-of-Scope Refusal): When queried on facts absent from the uploaded sources, the system refuses hallucination with \emph{``The sources don't say.''} while keeping the closest retrieved passages available in Evidence.}
+\label{fig:sample-refusal}
+\end{figure}
+
+\subsection{Final Evaluation: Hosted Stack and Viva Demonstration}
+The complete application stack is containerized via \texttt{docker-compose.yml} across four coordinated services with health checks and persistent named volumes: \texttt{ankane/pgvector} (vector store), \texttt{neo4j:5} (knowledge graph), \texttt{api} (FastAPI + SentenceTransformers), and \texttt{web} (nginx serving the production React bundle and proxying \texttt{/api/} with \texttt{proxy\_buffering off} so SSE tokens stream immediately without buffering). Unbuffered SSE delivery through the nginx container was verified live (events arriving incrementally across a 1,385~ms stream span).
+
+For the final viva demonstration, the live workflow exercises: (1) verifying database and LLM readiness via \texttt{python -m scripts.check\_llm} and the status indicator; (2) uploading a document at runtime and observing live per-stage ingestion; (3) asking a grounded question to show streaming citations and section headings; (4) asking an unanswerable question to verify \emph{``The sources don't say.''}; and (5) toggling Developer mode to inspect retrieval scores, timings, and live \emph{Compare} output.
+
+\subsection{Final Submission Checklist}
+Table~\ref{tab:checklist} confirms the completion of all Deliverable~3 submission items.
+
+\begin{table}[H]
+\centering
+\caption{Verification against the Deliverable~3 Final Submission Checklist.}
+\label{tab:checklist}
+\small
+\begin{tabularx}{\textwidth}{@{}L{4.2cm} Y L{1.8cm}@{}}
+\toprule
+\textbf{Checklist Item} & \textbf{Verification Status} & \textbf{Status} \\
+\midrule
+Production-ready GitHub repository & Contains \texttt{requirements.txt}, descriptive \texttt{README.md} (architecture, setup, Docker/local run commands, environment variables), full backend/frontend source code, and \texttt{.gitignore} excluding \texttt{.env} secrets and build artifacts. & Complete \\
+\addlinespace
+Real-time Integration \& UX tests & Playwright end-to-end verification across User and Developer modes with zero browser console errors; automated backend test suite (\texttt{pytest}) covering ingestion, heading extraction, and SSE streaming contracts. & Complete \\
+\addlinespace
+Final \LaTeX{} Report & Comprehensive technical documentation with formatted tables, visualizations, sample predictions, and bibliography citations. & Complete \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Team Contributions (Deliverable 3)}
+\begin{table}[H]
+\centering
+\caption{Team contribution table (Deliverable 3).}
+\label{tab:team-d3}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}L{3.1cm} L{1.9cm} L{3.1cm} Y@{}}
+\toprule
+\textbf{Member} & \textbf{Roll No.} & \textbf{Assigned Module} & \textbf{Key Deliverables} \\
+\midrule
+Muhammad Husnain Khan & 24L-3007 & Backend API, LLM Layer \& SSE Chat & \texttt{retrieval/llm.py}, \texttt{retrieval/store.py}, \texttt{retrieval/chat.py}, \texttt{api/main.py}: Gemini/OpenAI-compat provider abstraction, pooled pgvector/Neo4j stores, SSE streaming pipeline with citation validation, \texttt{scripts/check\_llm.py}, \texttt{scripts/seed\_library.py}. \\
+\addlinespace
+Muhammad Muazzam Mahmood & 24L-3063 & Frontend UI \& Docker Deployment & \texttt{web/}: Reading Room UI, User/Developer modes, Thinking depth selector, Library panel; \texttt{Dockerfile}, \texttt{docker-compose.yml}, unbuffered \texttt{nginx.conf}, \texttt{README.md}, \texttt{requirements.txt}. \\
+\addlinespace
+Rai Muhammad Umais & 24L-3032 & Runtime Ingestion, Headings \& Tests & \texttt{ingest/pipeline.py}, multi-format heading extraction and cleaning in \texttt{data\_scripts/collect\_files.py} and \texttt{chunk\_data.py}, runtime config, automated Track~A tests (\texttt{tests/test\_track\_a\_backend.py}), WCAG contrast check (\texttt{scripts/contrast.py}). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section*{Reproducibility}
+\begin{verbatim}
+# 1. Start stores and verify live LLM connectivity
+docker compose up --build                # Full stack on http://localhost:8080
+
+# Or run locally for development:
+pip install -r requirements.txt
+cp .env.example .env                     # Add GEMINI_API_KEY (never commit .env)
+python -m scripts.check_llm              # Verify model probe & round-trip latency
+python -m uvicorn api.main:app --port 8000
+cd web && npm install && npm run dev     # Frontend at http://localhost:5173
+python -m pytest                         # Run automated test suite
+\end{verbatim}
+
+\begin{thebibliography}{9}
+\bibitem{lewis2020rag} P.~Lewis, E.~Perez, A.~Piktus, F.~Petroni, V.~Karpukhin, N.~Goyal, H.~K\"uttler, M.~Lewis, W.~Yih, T.~Rockt\"aschel, S.~Riedel, and D.~Kiela. Retrieval-augmented generation for knowledge-intensive NLP tasks. In \emph{Advances in Neural Information Processing Systems 33 (NeurIPS)}, 2020.
+\bibitem{reimers2019sbert} N.~Reimers and I.~Gurevych. Sentence-BERT: Sentence embeddings using Siamese BERT-networks. In \emph{Proceedings of EMNLP-IJCNLP}, pages 3982--3992, 2019.
+\bibitem{wang2020minilm} W.~Wang, F.~Wei, L.~Dong, H.~Bao, N.~Yang, and M.~Zhou. MiniLM: Deep self-attention distillation for task-agnostic compression of pre-trained transformers. In \emph{Advances in Neural Information Processing Systems 33 (NeurIPS)}, 2020.
+\bibitem{liu2024lost} N.~F. Liu, K.~Lin, J.~Hewitt, A.~Paranjape, M.~Bevilacqua, F.~Petroni, and P.~Liang. Lost in the middle: How language models use long contexts. \emph{Transactions of the Association for Computational Linguistics}, 12:157--173, 2024.
+\bibitem{sse} WHATWG. \emph{HTML Living Standard: Server-sent events}. \url{https://html.spec.whatwg.org/multipage/server-sent-events.html}
+\end{thebibliography}
+
+\end{document}

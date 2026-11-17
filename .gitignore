@@ -71,3 +71,9 @@ Desktop.ini
 !report/figures/.gitkeep
 !report/generated/numbers.tex
 !report/main.pdf
+
+# 7. Web app build artefacts
+web/node_modules/
+web/dist/
+data/raw/uploads/*/
+
