@@ -55,9 +55,33 @@ def split_paragraphs(text: str) -> list[str]:
     return [p for p in paras if p]
 
 
+def clean_heading(h: str) -> str:
+    """Strip markdown markers (*, _, #, backticks) and stray edge dashes/spaces from a heading."""
+    h = re.sub(r"[*_#`]+", "", h or "")
+    h = re.sub(r"\s+", " ", h).strip(" \t\r\n-–—:")
+    return h
+
+
 def is_heading(par: str) -> bool:
-    """Heuristic: short, no sentence punctuation at the end."""
-    return _wc(par) <= HEADING_MAX_WORDS and not par.endswith(_END_PUNCT)
+    """Heuristic: short, no sentence punctuation at the end (or numbered / markdown / all-caps heading)."""
+    raw = par.strip()
+    if not raw:
+        return False
+    if raw.startswith("#"):
+        cleaned = clean_heading(raw)
+        return 0 < _wc(cleaned) <= HEADING_MAX_WORDS + 4
+    cleaned = clean_heading(raw)
+    wc = _wc(cleaned)
+    if wc == 0 or wc > HEADING_MAX_WORDS:
+        return False
+    # Numbered heading like "1. Introduction" or "2.1 Architecture"
+    if re.match(r"^\d+(\.\d+)*\.?\s+\S", cleaned) and not cleaned.endswith((".", "!", "?", ";", ",")):
+        return True
+    # Short line in ALL CAPS
+    letters = [c for c in cleaned if c.isalpha()]
+    if letters and all(c.isupper() for c in letters) and not cleaned.endswith((".", "!", "?", ";", ",")):
+        return True
+    return not raw.endswith(_END_PUNCT)
 
 
 def build_sections(paragraphs: list[str], detect_headings: bool) -> list[tuple[str, list[str]]]:
@@ -68,13 +92,13 @@ def build_sections(paragraphs: list[str], detect_headings: bool) -> list[tuple[s
         if detect_headings and i + 1 < len(paragraphs) and is_heading(par):
             if body:
                 sections.append((heading, body))
-            heading, body = par, []
+            heading, body = clean_heading(par), []
         else:
             body.append(par)
     if body:
         sections.append((heading, body))
     return [
-        (h, b) for h, b in sections if h.strip().lower() not in SKIP_SECTIONS
+        (clean_heading(h), b) for h, b in sections if clean_heading(h).lower() not in SKIP_SECTIONS
     ]
 
 
@@ -137,7 +161,8 @@ def chunk_record(
 ) -> list[dict[str, Any]]:
     """Chunk one cleaned record into chunk dicts (with provenance metadata)."""
     paragraphs = split_paragraphs(rec["text"])
-    sections = build_sections(paragraphs, rec["source_type"] == "website")
+    detect = bool(rec.get("detect_headings", rec.get("source_type") in ("website", "txt", "docx")))
+    sections = build_sections(paragraphs, detect)
 
     pieces: list[tuple[str, str]] = []  # (heading, text)
     for heading, body in sections:

@@ -1,0 +1,10 @@
+Microservices is an architectural style that structures an application as a collection of small services.
+Each service is built around a business capability and can be deployed independently of the others.
+Netflix adopted Microservices after moving its streaming platform to Amazon Web Services in the early 2010s.
+Martin Fowler and James Lewis described the Microservices style in a widely read article published in 2014.
+Teams that use Microservices often rely on Docker and Kubernetes to package and orchestrate their services.
+Kubernetes was originally designed by Google and is now maintained by the Cloud Native Computing Foundation.
+The Cloud Native Computing Foundation also hosts projects such as Prometheus and Envoy for monitoring and networking.
+Amazon Web Services provides managed databases, queues and load balancers that Microservices teams commonly use.
+A common drawback of Microservices is operational complexity, since many services must be monitored and versioned together.
+Conway's Law says that organisations design systems that mirror their own communication structure, which influences Microservices boundaries.

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from pathlib import Path
 from typing import Any
 
@@ -26,25 +27,55 @@ class ExtractionError(Exception):
     """A file could not be turned into text; message is the logged reason."""
 
 
+def _format_pdf_page(page_text: str, page_num: int) -> str:
+    """Preserve short heading lines inside a PDF page; add Page N fallback if no heading starts the page."""
+    lines = [ln.strip() for ln in page_text.splitlines() if ln.strip()]
+    if not lines:
+        return ""
+    out: list[str] = []
+    has_heading = False
+    for idx, ln in enumerate(lines):
+        wc = len(ln.split())
+        is_h = (
+            0 < wc <= 10
+            and not ln.endswith((".", "!", "?", ":", ";", ","))
+            and (
+                re.match(r"^(\d+(\.\d+)*\.?\s+[A-Z]|#+\s+\S)", ln)
+                or ln.isupper()
+                or (idx + 1 < len(lines) and len(lines[idx + 1].split()) >= 12 and ln[0].isupper())
+            )
+        )
+        if is_h:
+            has_heading = True
+            out.append(f"\n\n{ln}\n\n")
+        else:
+            out.append(ln)
+    joined = "\n".join(out)
+    if not has_heading:
+        return f"Page {page_num}\n\n{joined}"
+    return joined
+
+
 def extract_pdf(path: Path) -> tuple[str, str, dict[str, Any]]:
     """Return ``(title, text, metadata)`` for a PDF; raises for scanned PDFs."""
     from pypdf import PdfReader
 
     try:
         reader = PdfReader(str(path))
-        pages = [(page.extract_text() or "") for page in reader.pages]
+        raw_pages = [(page.extract_text() or "") for page in reader.pages]
     except Exception as exc:  # pypdf raises many exception types
         raise ExtractionError(f"unreadable PDF: {type(exc).__name__}") from exc
-    text = "\n\n".join(p.strip() for p in pages if p.strip())
-    n_pages = max(len(pages), 1)
-    if len(text) / n_pages < config.SCANNED_MIN_CHARS_PER_PAGE:
+    raw_text = "\n\n".join(p.strip() for p in raw_pages if p.strip())
+    n_pages = max(len(raw_pages), 1)
+    if len(raw_text) / n_pages < config.SCANNED_MIN_CHARS_PER_PAGE:
         raise ExtractionError("needs OCR")
+    text = "\n\n".join(_format_pdf_page(p, i + 1) for i, p in enumerate(raw_pages) if p.strip())
     title = ""
     try:
         title = (reader.metadata.title or "").strip() if reader.metadata else ""
     except Exception:  # noqa: BLE001
         title = ""
-    return title, text, {"page_count": len(pages)}
+    return title, text, {"page_count": len(raw_pages)}
 
 
 def extract_docx(path: Path) -> tuple[str, str, dict[str, Any]]:
@@ -55,7 +86,15 @@ def extract_docx(path: Path) -> tuple[str, str, dict[str, Any]]:
         document = docx.Document(str(path))
     except Exception as exc:  # noqa: BLE001
         raise ExtractionError(f"unreadable DOCX: {type(exc).__name__}") from exc
-    paras = [p.text.strip() for p in document.paragraphs if p.text.strip()]
+    paras: list[str] = []
+    for p in document.paragraphs:
+        t = p.text.strip()
+        if not t:
+            continue
+        style_name = (getattr(p.style, "name", "") or "").lower()
+        if "heading" in style_name or "title" in style_name:
+            t = re.sub(r"[*_#`]+", "", t).strip().rstrip(".:;")
+        paras.append(t)
     title = (document.core_properties.title or "").strip()
     return title, "\n\n".join(paras), {"paragraph_count": len(paras)}
 
@@ -65,7 +104,17 @@ def extract_txt(path: Path) -> tuple[str, str, dict[str, Any]]:
     raw = path.read_bytes()
     for enc in _ENCODINGS:
         try:
-            return "", raw.decode(enc), {"encoding": enc}
+            decoded = raw.decode(enc)
+            # Ensure single-line markdown (#) or numbered headings are separated by blank lines
+            lines = decoded.splitlines()
+            out: list[str] = []
+            for ln in lines:
+                s = ln.strip()
+                if s and (s.startswith("#") or (len(s.split()) <= 10 and re.match(r"^\d+(\.\d+)*\.?\s+[A-Z]", s) and not s.endswith("."))):
+                    out.append(f"\n{s}\n")
+                else:
+                    out.append(ln)
+            return "", "\n".join(out), {"encoding": enc}
         except UnicodeDecodeError:
             continue
     raise ExtractionError("undecodable text encoding")  # pragma: no cover
