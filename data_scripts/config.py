@@ -82,3 +82,33 @@ def ensure_dirs() -> None:
         GENERATED_DIR,
     ):
         directory.mkdir(parents=True, exist_ok=True)
+
+
+# --- Phase 3/4: retrieval, generation, web app ------------------------------
+# Secrets are read from the environment only (never from files in the repo).
+def _env(*names: str, default: str = "") -> str:
+    for n in names:
+        v = os.environ.get(n)
+        if v:
+            return v
+    return default
+
+
+CHUNKS_PATH = PROCESSED_DIR / "chunks.jsonl"
+PGVECTOR_DSN: str = _env("INTELLIGRAPH_PGVECTOR_DSN", default="postgresql://postgres:pass@localhost:5433/postgres")
+NEO4J_URI: str = _env("INTELLIGRAPH_NEO4J_URI", default="bolt://localhost:7687")
+NEO4J_USER: str = _env("INTELLIGRAPH_NEO4J_USER", default="neo4j")
+NEO4J_PASSWORD: str = _env("INTELLIGRAPH_NEO4J_PASSWORD", default="password")
+GEMINI_API_KEY: str = _env("INTELLIGRAPH_GEMINI_API_KEY", "GEMINI_API_KEY")
+GROQ_API_KEY: str = _env("INTELLIGRAPH_OPENAI_COMPAT_API_KEY", "GROQ_API_KEY")
+OPENAI_COMPAT_BASE_URL: str = _env("INTELLIGRAPH_OPENAI_COMPAT_BASE_URL", default="https://api.groq.com/openai/v1")
+OPENAI_COMPAT_MODEL: str = _env("INTELLIGRAPH_OPENAI_COMPAT_MODEL", default="llama-3.1-8b-instant")
+LLM_PROVIDER: str = _env("INTELLIGRAPH_LLM_PROVIDER", default="gemini")
+GEMINI_MODEL_PIN: str = _env("INTELLIGRAPH_GEMINI_MODEL")
+GEMINI_MODEL_PREFERENCE: str = _env("INTELLIGRAPH_GEMINI_MODEL_PREFERENCE")
+EMBEDDING_MODEL: str = _env("INTELLIGRAPH_EMBEDDING_MODEL", default="all-MiniLM-L6-v2")
+TOP_K: int = int(_env("INTELLIGRAPH_TOP_K", default="5"))
+MAX_UPLOAD_MB: int = int(_env("INTELLIGRAPH_MAX_UPLOAD_MB", default="20"))
+FRONTEND_ORIGIN: str = _env("INTELLIGRAPH_FRONTEND_ORIGIN", default="http://localhost:5173,http://localhost:8080")
+RATE_LIMIT_PER_MIN: int = int(_env("INTELLIGRAPH_RATE_LIMIT_PER_MIN", default="120"))
+ANSWER_CACHE: bool = _env("INTELLIGRAPH_ANSWER_CACHE", default="0") == "1"
