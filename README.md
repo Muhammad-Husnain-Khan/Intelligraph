@@ -11,7 +11,34 @@ This repository contains **Deliverable 1** (Phases 1-2) and **Deliverable 2** (P
 | 1. Problem Definition | Problem, audience, AI justification | `report/main.tex` |
 | 2. Data Acquisition & Preprocessing | Collection, cleaning, feature strategy, EDA | `data_scripts/`, `report/main.tex` |
 
-Later phases (web app, conversational UI) are **not** implemented here.
+Later phases: the web app (Deliverable 3, Track A) lives in `web/` and `api/`; see **Run** below.
+
+## Run
+
+**Docker (whole stack):** `docker compose up --build`, then open http://localhost:8080.
+
+**Local:**
+```bash
+docker start pg-vector neo4j          # or the docker run lines in the Deliverable 2 section
+pip install -r requirements.txt
+cp .env.example .env                  # then add your own key; .env is git-ignored
+python -m scripts.check_llm           # confirms a real model + one round trip
+python -m scripts.seed_library        # loads data/processed/chunks.jsonl as the library (if it exists)
+python -m uvicorn api.main:app --port 8000
+cd web && npm install && npm run dev  # http://localhost:5173
+pytest tests/test_track_a_backend.py  # mocked tests; the older tests need live Postgres/Neo4j
+```
+
+| Variable | Purpose |
+|----------|---------|
+| `INTELLIGRAPH_GEMINI_API_KEY` (or `GEMINI_API_KEY`) | Google AI Studio key (primary LLM) |
+| `GROQ_API_KEY` | Optional OpenAI-compatible backup |
+| `INTELLIGRAPH_LLM_PROVIDER` | `gemini` (default) or `openai_compat` |
+| `INTELLIGRAPH_GEMINI_MODEL` / `..._MODEL_PREFERENCE` | Optional pin / preference list; default auto-picks from the live model list |
+| `INTELLIGRAPH_PGVECTOR_DSN`, `INTELLIGRAPH_NEO4J_*` | Store connections |
+| `INTELLIGRAPH_MAX_UPLOAD_MB`, `INTELLIGRAPH_FRONTEND_ORIGIN`, `INTELLIGRAPH_RATE_LIMIT_PER_MIN` | Upload limit, CORS origins, per-IP rate limit |
+
+API: `GET /api/health`, `GET/DELETE /api/sources`, `POST /api/sources/{files,url,text}`, `GET /api/sources/{id}/events` (SSE), `POST /api/chat/stream` (SSE), `POST /api/chat`, `POST /api/compare`, `GET /api/graph`. Legacy `/health` and `/query/*` are unchanged.
 
 ## Team
 
