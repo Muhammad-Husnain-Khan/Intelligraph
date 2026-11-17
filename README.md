@@ -4,14 +4,13 @@
 
 IntelliGraph lets a user supply a website URL or upload a document (PDF, DOCX, TXT). The planned pipeline scrapes and cleans the text, builds a knowledge graph of the main concepts and their relations, and answers questions *only* from that data, with citations to the source passages. If the source holds no evidence, the system says so instead of guessing.
 
-This repository contains **Deliverable 1** (Phases 1-2) and **Deliverable 2** (Phases 3-4, see below):
+This repository covers all three project deliverables:
 
-| Phase | Content | Where |
-|-------|---------|-------|
-| 1. Problem Definition | Problem, audience, AI justification | `report/main.tex` |
-| 2. Data Acquisition & Preprocessing | Collection, cleaning, feature strategy, EDA | `data_scripts/`, `report/main.tex` |
-
-Later phases: the web app (Deliverable 3, Track A) lives in `web/` and `api/`; see **Run** below.
+| Deliverable | Phases & Content | Where |
+|-------------|------------------|-------|
+| 1 | Phases 1–2: Problem definition, collection, cleaning, chunking, EDA | `data_scripts/`, `report/main.tex` |
+| 2 | Phases 3–4: Vector, Graph & Hybrid retrieval, hyperparameter sweeps, 48-Q eval | `retrieval/`, `tuning/`, `eval/`, `report/main2.tex` |
+| 3 (Track A) | Phases 5–6: Runtime ingestion, SSE streaming API, React Reading Room UI, Docker | `api/`, `ingest/`, `web/`, `scripts/`, `report/main3.tex` |
 
 ## Run
 
@@ -64,27 +63,63 @@ All manifest entries are a starting point; **verify them** before the real run.
 
 ## Folder structure
 
-```
+```text
 .
 ├── README.md
-├── .gitignore  .env.example  requirements.txt  pytest.ini
-├── data_scripts/          # ALL Phase 2 code
-│   ├── config.py          # paths, thresholds, timeouts, User-Agent
-│   ├── utils.py           # logging, JSONL, language heuristic, SSRF + robots.txt checks
-│   ├── collect_web.py     # scrape URLs from the manifest
-│   ├── download_papers.py # download arXiv PDFs into uploads/
-│   ├── collect_files.py   # extract text from PDF/DOCX/TXT
-│   ├── clean_data.py      # cleaning + audit
-│   ├── features.py        # normalization, scaling, encoding
-│   ├── run_eda.py         # 4 report figures
-│   ├── make_report_numbers.py  # report/generated/numbers.tex
-│   └── run_pipeline.py    # runs everything in order
+├── .gitignore  .env.example  requirements.txt  pytest.ini  pyrightconfig.json
+├── Dockerfile                 # FastAPI backend container
+├── docker-compose.yml         # Full stack: pgvector, neo4j, api, web (nginx)
+├── api/
+│   └── main.py                # FastAPI service (/health, /query/*, /api/* SSE & REST)
+├── ingest/
+│   └── pipeline.py            # Runtime file/URL/text ingestion + per-stage SSE events
+├── retrieval/
+│   ├── embed.py               # Local SentenceTransformer (all-MiniLM-L6-v2)
+│   ├── store.py               # Pooled Postgres/pgvector + Neo4j storage & upserts
+│   ├── llm.py                 # Gemini & OpenAI-compat (Groq) provider layer + probe
+│   ├── gemini_client.py       # Legacy REST client for /query/* endpoints
+│   ├── chat.py                # Streaming hybrid chat, bridge passages, citation check
+│   ├── index_chunks.py        # Batch pgvector indexer (Deliverable 2 CLI)
+│   ├── graph_build.py         # Sentence co-occurrence entity graph builder
+│   ├── vector_retriever.py    # Architecture 1: Vector-only retriever
+│   ├── graph_retriever.py     # Architecture 2: Graph-only retriever
+│   └── hybrid_retriever.py    # Architecture 3: Hybrid retriever
+├── web/                       # React + Vite + TypeScript frontend (Reading Room UI)
+│   ├── Dockerfile  nginx.conf # Production static build + unbuffered /api SSE proxy
+│   ├── package.json  tsconfig.json  vite.config.ts  index.html
+│   └── src/
+│       ├── main.tsx           # App entry + self-hosted Newsreader & IBM Plex Mono fonts
+│       ├── App.tsx            # Transcript, User/Developer modes, Thinking depth, Evidence
+│       ├── Library.tsx        # Source upload, URL/text ingestion, scope & disclosures
+│       ├── api.ts             # SSE & REST client
+│       ├── config.ts          # Shared Thinking levels (K=3/5/10), heading & title helpers
+│       ├── types.ts           # TypeScript contracts
+│       └── styles.css         # Midnight Ink & Warm Ivory design tokens + print rules
+├── data_scripts/              # Phase 2 data pipeline & heading extraction
+│   ├── config.py              # Paths, thresholds, timeouts, runtime env settings
+│   ├── utils.py               # Logging, JSONL, language heuristic, SSRF + robots.txt
+│   ├── collect_web.py         # Scrape URLs from manifest
+│   ├── download_papers.py     # Download arXiv PDFs into uploads/
+│   ├── collect_files.py       # Extract text & headings from PDF/DOCX/TXT
+│   ├── clean_data.py          # Cleaning + audit
+│   ├── chunk_data.py          # Heading-aware 300/50 hybrid chunker
+│   ├── features.py            # Normalization, scaling, encoding
+│   ├── run_eda.py             # EDA report figures
+│   ├── make_report_numbers.py # Writes report/generated/numbers.tex
+│   └── run_pipeline.py        # Batch pipeline runner
+├── scripts/
+│   ├── check_llm.py           # Pre-demo LLM probe & round-trip check
+│   ├── seed_library.py        # Incremental loader for data/processed/chunks.jsonl
+│   └── contrast.py            # WCAG AA colour-contrast verification
+├── eval/                      # Phase 4 golden QA benchmark (48 Qs), metrics & bias check
+├── tuning/                    # Chunking & embedding model sweeps
 ├── data/
-│   ├── manifests/         # urls.csv, papers.csv (committed)
-│   └── raw/ interim/ processed/   # contents git-ignored
-├── logs/                  # collection_log.jsonl, cleaning_audit.json
-├── report/                # main.tex, figures/, generated/numbers.tex
-└── tests/                 # offline tests
+│   ├── manifests/             # urls.csv, papers.csv (committed)
+│   ├── sample_microservices.txt # Sample document for live upload testing
+│   └── raw/ interim/ processed/ # Working data (contents git-ignored)
+├── logs/                      # collection_log.jsonl, cleaning_audit.json
+├── report/                    # main.tex, main2.tex, main3.tex, figures/, generated/
+└── tests/                     # Unit & contract tests (offline + live DB integration)
 ```
 
 ## Setup
